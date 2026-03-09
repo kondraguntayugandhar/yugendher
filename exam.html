@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCS NQT | Exam Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0d1117',
+                            surface: '#161b22',
+                            border: '#30363d',
+                            text: '#c9d1d9',
+                            muted: '#8b949e'
+                        },
+                        brand: {
+                            blue: '#0ea5e9',
+                            red: '#ef4444',
+                            yellow: '#f59e0b',
+                            green: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Monaco Editor AMD loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+</head>
+<body class="bg-dark-bg text-dark-text h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Top Bar -->
+    <header class="h-14 shrink-0 bg-dark-surface border-b border-dark-border flex items-center justify-between px-4 z-10 w-full relative shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+        <!-- Tabs -->
+        <div class="flex h-full" id="section-tabs">
+            <div id="tab-aptitude" class="px-6 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors text-brand-blue border-brand-blue bg-brand-blue/5">
+                <i class="ph ph-brain mr-2" id="icon-aptitude"></i> Aptitude
+            </div>
+            <div id="tab-reasoning" class="px-6 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors text-dark-muted border-transparent">
+                <i class="ph ph-puzzle-piece mr-2" id="icon-reasoning"></i> Reasoning
+            </div>
+            <div id="tab-java" class="px-6 h-full flex items-center justify-center text-sm font-bold border-b-2 transition-colors text-dark-muted border-transparent">
+                <i class="ph ph-code mr-2" id="icon-java"></i> Java Programming
+            </div>
+        </div>
+
+        <!-- Global Timer -->
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3 px-4 py-1.5 rounded-md bg-dark-bg border border-brand-red/30 glow-text-danger">
+            <i class="ph-fill ph-timer text-brand-red animate-pulse"></i>
+            <span class="font-mono text-xl font-bold text-brand-red tracking-wider tracking-widest" id="exam-timer">89:42:15</span>
+        </div>
+
+        <!-- Actions -->
+        <div>
+            <button class="px-5 py-2 rounded shadow-lg bg-dark-bg border border-dark-border text-xs font-bold text-white hover:bg-dark-border transition-colors hover:text-brand-red flex items-center" onclick="window.location.href='analytics.html'">
+                FINISH TEST <i class="ph ph-sign-out ml-2"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Split Screen Workspace -->
+    <main id="exam-main-container" class="flex-grow flex w-full relative" style="height: calc(100vh - 56px - 48px);">
+        
+        <!-- Left Panel: Problem Statement -->
+        <section id="java-left-panel" class="w-2/5 h-full overflow-y-auto bg-dark-bg border-r border-dark-border relative scrollbar-custom hidden">
+            <div class="p-8">
+                <div id="java-nav-bar" class="flex gap-2 overflow-x-auto mb-6 pb-2 scrollbar-thin scrollbar-thumb-dark-border scrollbar-track-transparent">
+                    <!-- Nav buttons injected here -->
+                </div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="px-2.5 py-1 text-xs font-bold rounded border border-brand-red/50 bg-brand-red/10 text-brand-red">MEDIUM / ADVANCED</span>
+                    <span class="text-sm text-dark-muted" id="time-limit-header">Time: 20 Minutes</span>
+                </div>
+
+                <h1 class="text-2xl font-bold text-white mb-6" id="dynamic-title">Loading Problem...</h1>
+
+                <div class="prose prose-invert prose-sm max-w-none text-gray-300">
+                    <p class="mb-6 text-base leading-relaxed" id="dynamic-desc"></p>
+
+                    <!-- Dynamic Examples Container -->
+                    <div id="dynamic-examples-container"></div>
+
+                    <!-- Dynamic Constraints Container -->
+                    <div class="mb-6">
+                        <h3 class="text-white font-semibold mb-2 flex items-center"><i class="ph ph-warning mr-2 text-yellow-500"></i>Constraints</h3>
+                        <ul id="dynamic-constraints" class="list-disc pl-5 space-y-1 text-dark-muted text-sm bg-dark-surface/50 p-4 rounded-lg border border-dark-border border-l-2 border-l-yellow-500">
+                        </ul>
+                    </div>
+
+                    <!-- Java Next/Prev Navigation -->
+                    <div class="mt-10 flex items-center justify-between border-t border-dark-border pt-6">
+                        <button onclick="navigateQuestion('prev')" id="java-btn-prev" class="px-4 text-sm font-medium py-2 rounded border border-dark-border bg-dark-surface text-white hover:bg-dark-border transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ph ph-arrow-left"></i> Previous
+                        </button>
+                        <button onclick="navigateQuestion('next')" id="java-btn-next" class="px-4 text-sm font-medium py-2 rounded bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-brand-blue/20 transition flex items-center gap-2">
+                            Next <i class="ph ph-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Code Editor -->
+        <section id="java-right-panel" class="w-3/5 h-full flex flex-col bg-[#1e1e1e] hidden">
+            <!-- Editor Header -->
+            <div class="h-10 shrink-0 bg-dark-bg flex justify-between items-center px-4 border-b border-dark-border">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-file-code text-brand-blue"></i>
+                    <span class="text-sm font-medium text-white">Solution.java</span>
+                </div>
+                <div class="flex gap-2">
+                    <button class="p-1.5 text-dark-muted hover:text-white rounded hover:bg-dark-surface transition">
+                        <i class="ph ph-arrow-counter-clockwise"></i>
+                    </button>
+                    <button class="p-1.5 text-dark-muted hover:text-white rounded hover:bg-dark-surface transition">
+                        <i class="ph ph-gear"></i>
+                    </button>
+                    <div class="h-4 w-[1px] bg-dark-border my-auto mx-1"></div>
+                    <select class="bg-transparent text-sm text-dark-muted focus:ring-0 focus:outline-none cursor-pointer hover:text-white">
+                        <option>Java 17 (NQT Standard)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Monaco Editor Container -->
+            <div id="editor-container" class="flex-grow w-full relative">
+                <!-- Fallback/Loading State -->
+                <div id="editor-loading" class="absolute inset-0 flex items-center justify-center text-dark-muted z-10 bg-[#1e1e1e]">
+                    <i class="ph ph-spinner-gap animate-spin text-3xl mr-2"></i> Initializing Compiler Environment...
+                </div>
+            </div>
+        </section>
+
+        <!-- MCQ Dashboard (Hidden by default, shown for Aptitude/Reasoning) -->
+        <section id="mcq-panel" class="w-full h-full bg-dark-bg overflow-y-auto p-12 flex justify-center items-start">
+            <div class="max-w-4xl w-full mt-10">
+                <div id="mcq-nav-bar" class="flex gap-2 overflow-x-auto mb-6 pb-2 scrollbar-thin scrollbar-thumb-dark-border scrollbar-track-transparent">
+                    <!-- Nav buttons injected here -->
+                </div>
+                <div class="flex items-center justify-between mb-6">
+                    <span class="px-3 py-1 text-xs font-bold rounded border border-brand-blue/50 bg-brand-blue/10 text-brand-blue tracking-wide" id="mcq-type-badge">APTITUDE SECTION</span>
+                </div>
+                <h2 class="text-2xl font-medium text-white mb-10 leading-relaxed" id="mcq-question-text">
+                    Loading question...
+                </h2>
+                <div class="grid grid-cols-1 gap-4" id="mcq-options-container">
+                    <!-- Options injected here -->
+                </div>
+                
+                <!-- MCQ Next/Prev Navigation -->
+                <div class="mt-10 flex items-center justify-between border-t border-dark-border pt-6">
+                    <button onclick="navigateQuestion('prev')" id="mcq-btn-prev" class="px-5 text-sm font-medium py-2 rounded border border-dark-border bg-dark-surface text-white hover:bg-dark-border transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="ph ph-arrow-left"></i> Previous Question
+                    </button>
+                    <button onclick="navigateQuestion('next')" id="mcq-btn-next" class="px-5 text-sm font-medium py-2 rounded bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-brand-blue/20 transition flex items-center gap-2">
+                        Next Question <i class="ph ph-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Action Bar -->
+    <footer class="h-12 shrink-0 bg-dark-surface border-t border-dark-border flex items-center justify-between px-4 fixed bottom-0 w-full z-20">
+        <!-- Tools -->
+        <div class="flex items-center gap-4 text-sm">
+            <button class="flex items-center text-dark-muted hover:text-white transition-colors">
+                <i class="ph ph-calculator mr-1.5"></i> Calculator
+            </button>
+            <button class="flex items-center text-dark-muted hover:text-white transition-colors">
+                <i class="ph ph-note-pencil mr-1.5"></i> Rough Work
+            </button>
+            <button class="flex items-center text-dark-muted hover:text-white transition-colors">
+                <i class="ph ph-info mr-1.5"></i> Instructions
+            </button>
+        </div>
+
+        <!-- Submit Actions -->
+        <div class="flex items-center gap-3">
+            <!-- Status Pill -->
+            <div class="flex items-center gap-1.5 mr-4 text-xs">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span class="text-dark-muted">Network: Connected</span>
+                <span class="text-dark-muted border-l border-dark-border ml-2 pl-2">v26.0.4</span>
+            </div>
+
+            <button id="run-code-btn" class="px-5 py-1.5 rounded bg-dark-bg border border-dark-border text-sm font-medium hover:bg-dark-border transition-colors text-white">
+                Run Code
+            </button>
+            <button id="submit-code-btn" class="px-6 py-1.5 rounded bg-brand-green text-sm font-bold text-dark-bg hover:bg-emerald-400 transition-colors glow-primary border border-emerald-400">
+                Submit Code
+            </button>
+        </div>
+    </footer>
+
+    <!-- Initialize Monaco -->
+    <script>
+        let currentSection = 'aptitude';
+        let testDataObj = null;
+        let currentQuestionIndex = { aptitude: 0, reasoning: 0, java: 0 };
+        let answers = { aptitude: {}, reasoning: {}, java: {} };
+        
+        // Strict NQT Section Timings (in seconds)
+        let sectionTimers = { aptitude: 20 * 60, reasoning: 20 * 60, java: 75 * 60 };
+        let isTimerActive = false;
+
+        function renderNav(section) {
+            if(!testDataObj || !testDataObj[section]) return;
+            
+            const totalQuestions = testDataObj[section].length;
+            const navBar = document.getElementById(section === 'java' ? 'java-nav-bar' : 'mcq-nav-bar');
+            if(!navBar) return;
+
+            navBar.innerHTML = '';
+            for(let i=0; i<totalQuestions; i++) {
+                const isActive = i === currentQuestionIndex[section];
+                const isAnswered = answers[section][i] !== undefined; // For Java, maybe checking if code != boilerplate
+                
+                let btnClass = "w-10 h-10 shrink-0 rounded-lg flex items-center justify-center text-sm font-bold transition-all ";
+                if(isActive) {
+                    btnClass += "bg-brand-blue text-white shadow-lg shadow-brand-blue/20";
+                } else if (isAnswered) {
+                    btnClass += "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30";
+                } else {
+                    btnClass += "bg-dark-surface border border-dark-border text-dark-muted hover:text-white hover:border-gray-500";
+                }
+                
+                navBar.innerHTML += `<button onclick="goToQuestion('${section}', ${i})" class="${btnClass}">${i+1}</button>`;
+            }
+        }
+
+        function saveCurrentState() {
+            if(currentSection === 'java' && window.monacoEditorInstance) {
+                const code = window.monacoEditorInstance.getValue();
+                if(code && code !== boilerplate) {
+                    answers.java[currentQuestionIndex.java] = code;
+                }
+            }
+        }
+
+        function goToQuestion(section, index) {
+            // Save state of current tab before moving
+            saveCurrentState();
+            currentQuestionIndex[section] = index;
+            
+            if(section === 'java') {
+                loadJavaData(); 
+            } else {
+                renderNav(section);
+                loadMCQData(section);
+            }
+        }
+
+        function navigateQuestion(direction) {
+            if(!testDataObj || !testDataObj[currentSection]) return;
+            const totalQ = testDataObj[currentSection].length;
+            let targetIdx = currentQuestionIndex[currentSection];
+
+            if(direction === 'next') targetIdx++;
+            if(direction === 'prev') targetIdx--;
+
+            if(targetIdx >= 0 && targetIdx < totalQ) {
+                goToQuestion(currentSection, targetIdx);
+            } else if (direction === 'next' && targetIdx >= totalQ) {
+                // Next Section Trigger on the final question's Next button
+                if(currentSection === 'aptitude') switchSection('reasoning');
+                else if (currentSection === 'reasoning') switchSection('java');
+                else if (currentSection === 'java') document.getElementById('submit-code-btn').click();
+            }
+        }
+
+        function switchSection(section) {
+            saveCurrentState();
+            currentSection = section;
+            
+            // Tab Styling Update
+            const tabs = ['aptitude', 'reasoning', 'java'];
+            tabs.forEach(t => {
+                const btn = document.getElementById('tab-' + t);
+                if(t === section) {
+                    btn.className = "px-6 h-full flex items-center justify-center text-sm font-bold text-brand-blue border-b-2 border-brand-blue bg-brand-blue/5 transition-colors";
+                    if(t === 'java') document.getElementById('icon-java').className = "ph ph-code mr-2 text-brand-blue";
+                    else if (t === 'aptitude') document.getElementById('icon-aptitude').className = "ph ph-brain mr-2 text-brand-blue";
+                    else if (t === 'reasoning') document.getElementById('icon-reasoning').className = "ph ph-puzzle-piece mr-2 text-brand-blue";
+                } else {
+                    btn.className = "px-6 h-full flex items-center justify-center text-sm font-medium text-dark-muted border-b-2 border-transparent transition-colors";
+                    if(t === 'java') document.getElementById('icon-java').className = "ph ph-code mr-2";
+                    else if (t === 'aptitude') document.getElementById('icon-aptitude').className = "ph ph-brain mr-2";
+                    else if (t === 'reasoning') document.getElementById('icon-reasoning').className = "ph ph-puzzle-piece mr-2";
+                }
+            });
+
+            // Panel Visibility
+            const javaLeft = document.getElementById('java-left-panel');
+            const javaRight = document.getElementById('java-right-panel');
+            const mcqPanel = document.getElementById('mcq-panel');
+            
+            // Button Visibility
+            const runCodeBtn = document.getElementById('run-code-btn');
+            const submitCodeBtn = document.getElementById('submit-code-btn');
+
+            if (section === 'java') {
+                javaLeft.style.display = 'block';
+                javaRight.style.display = 'flex';
+                mcqPanel.style.display = 'none';
+                
+                runCodeBtn.style.display = 'block';
+                submitCodeBtn.innerText = 'Submit Test';
+                
+                renderNav(section);
+                loadJavaData();
+            } else {
+                javaLeft.style.display = 'none';
+                javaRight.style.display = 'none';
+                mcqPanel.style.display = 'flex';
+                
+                runCodeBtn.style.display = 'none';
+                submitCodeBtn.innerText = 'Next Section';
+                
+                renderNav(section);
+                loadMCQData(section);
+            }
+        }
+
+        function loadMCQData(section) {
+            if(!testDataObj) return;
+            const dataArray = testDataObj[section];
+            if(!dataArray || dataArray.length === 0) {
+                document.getElementById('mcq-question-text').innerText = "Test generation for " + section + " unavailable.";
+                return;
+            }
+
+            const qIndex = currentQuestionIndex[section];
+            const data = dataArray[qIndex];
+
+            document.getElementById('mcq-type-badge').innerText = section.toUpperCase() + " SECTION - Q" + (qIndex + 1);
+            document.getElementById('mcq-question-text').innerText = data.question;
+            
+            const container = document.getElementById('mcq-options-container');
+            container.innerHTML = '';
+            
+            data.options.forEach((opt, idx) => {
+                const isSelected = answers[section][qIndex] === opt;
+                const activeClass = isSelected ? 'border-brand-blue bg-brand-blue/10 text-brand-blue shadow-lg shadow-brand-blue/20' : 'border-dark-border bg-dark-surface hover:border-gray-500 text-gray-300 hover:text-white';
+                
+                container.innerHTML += `
+                    <div onclick="selectAnswer('${section}', '${opt.replace(/'/g, "\\'")}')" class="cursor-pointer p-5 rounded-xl border ${activeClass} transition-all duration-200 flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full border border-current flex items-center justify-center text-sm font-bold shrink-0">
+                            ${String.fromCharCode(65 + idx)}
+                        </div>
+                        <div class="text-lg font-medium">${opt}</div>
+                    </div>
+                `;
+            });
+
+            // Configure Prev/Next Buttons
+            const totalQ = dataArray.length;
+            const prevBtn = document.getElementById('mcq-btn-prev');
+            const nextBtn = document.getElementById('mcq-btn-next');
+            
+            if(qIndex === 0) {
+                prevBtn.disabled = true;
+            } else {
+                prevBtn.disabled = false;
+            }
+
+            if(qIndex === totalQ - 1) {
+                nextBtn.innerHTML = `Next Section <i class="ph ph-arrow-right"></i>`;
+                nextBtn.className = "px-5 text-sm font-medium py-2 rounded bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition flex items-center gap-2";
+            } else {
+                nextBtn.innerHTML = `Next Question <i class="ph ph-arrow-right"></i>`;
+                nextBtn.className = "px-5 text-sm font-medium py-2 rounded bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-brand-blue/20 transition flex items-center gap-2";
+            }
+
+            renderNav(section); // Refresh nav to highlight current question and answered status
+        }
+
+        function selectAnswer(section, answer) {
+            const qIndex = currentQuestionIndex[section];
+            answers[section][qIndex] = answer;
+            loadMCQData(section);
+        }
+
+        // Boilerplate Java Code
+        const boilerplate = `class Solution {
+    public void rotate(int[][] matrix) {
+        // AI Strict Proctoring is enabled.
+        // Focus on Time and Space Complexity.
+        // Write your solution here:
+        
+    }
+}`;
+
+        function loadJavaData() {
+            if(!testDataObj || !testDataObj.java) return;
+            const dataArray = testDataObj.java;
+            const qIndex = currentQuestionIndex.java;
+            const javaQuestion = dataArray[qIndex];
+
+            if (javaQuestion) {
+                document.getElementById('dynamic-title').innerText = "Q" + (qIndex+1) + ": " + javaQuestion.title;
+                document.getElementById('dynamic-desc').innerText = javaQuestion.description;
+                
+                const exContainer = document.getElementById('dynamic-examples-container');
+                exContainer.innerHTML = '';
+                javaQuestion.examples.forEach((ex, idx) => {
+                    exContainer.innerHTML += `
+                        <div class="mb-6">
+                            <h3 class="text-white font-semibold mb-2 flex items-center"><i class="ph ph-terminal-window mr-2"></i>Example ${idx + 1}</h3>
+                            <div class="bg-dark-surface p-4 rounded-lg border border-dark-border font-mono text-sm shadow-inner">
+                                <div class="text-dark-muted mb-1">Input:</div>
+                                <div class="text-white mb-3 whitespace-pre-wrap">${ex.input}</div>
+                                <div class="text-dark-muted mb-1">Output:</div>
+                                <div class="text-white whitespace-pre-wrap">${ex.output}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const cnContainer = document.getElementById('dynamic-constraints');
+                cnContainer.innerHTML = '';
+                javaQuestion.constraints.forEach(cn => {
+                    cnContainer.innerHTML += `<li><code class="text-gray-300">${cn}</code></li>`;
+                });
+            }
+            
+            if(window.monacoEditorInstance) {
+                const savedCode = answers.java[qIndex] || boilerplate;
+                window.monacoEditorInstance.setValue(savedCode);
+            }
+            
+            // Configure Prev/Next Buttons
+            const totalQ = dataArray.length;
+            const prevBtn = document.getElementById('java-btn-prev');
+            const nextBtn = document.getElementById('java-btn-next');
+            
+            if(qIndex === 0) {
+                prevBtn.disabled = true;
+            } else {
+                prevBtn.disabled = false;
+            }
+
+            if(qIndex === totalQ - 1) {
+                nextBtn.innerHTML = `Submit Section <i class="ph ph-check-circle"></i>`;
+                nextBtn.className = "px-4 text-sm font-medium py-2 rounded bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition flex items-center gap-2";
+            } else {
+                nextBtn.innerHTML = `Next <i class="ph ph-arrow-right"></i>`;
+                nextBtn.className = "px-4 text-sm font-medium py-2 rounded bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-brand-blue/20 transition flex items-center gap-2";
+            }
+
+            renderNav('java');
+        }
+
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            document.getElementById('editor-loading').style.display = 'none';
+            // Store instance globally so we can grab the code on submit
+            window.monacoEditorInstance = monaco.editor.create(document.getElementById('editor-container'), {
+                value: answers.java[currentQuestionIndex.java] || boilerplate,
+                language: 'java',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                roundedSelection: false,
+                padding: { top: 16 }
+            });
+        });
+
+        // --- Dynamic Problem Loading ---
+        const testDataStr = localStorage.getItem('currentTestData');
+        
+        if (testDataStr) {
+            try {
+                testDataObj = JSON.parse(testDataStr);
+                
+                // Initialize first section view and start timer
+                switchSection('aptitude');
+                isTimerActive = true;
+            } catch (e) {
+                console.error("Failed to parse test data", e);
+                switchSection('aptitude'); // Fallback
+            }
+        } else {
+            document.getElementById('mcq-question-text').innerText = "No test data found. Please start from the dashboard.";
+            switchSection('aptitude'); // Fallback
+        }
+
+        // Section Timer & Auto-Submit Logic
+        setInterval(() => {
+            if (!isTimerActive) return;
+
+            let currentSeconds = sectionTimers[currentSection];
+            if (currentSeconds <= 0) return; // Prevent negative tick
+
+            currentSeconds--;
+            sectionTimers[currentSection] = currentSeconds;
+
+            const p = n => n.toString().padStart(2, '0');
+            const h = Math.floor(currentSeconds / 3600);
+            const m = Math.floor((currentSeconds % 3600) / 60);
+            const s = Math.floor(currentSeconds % 60);
+            
+            document.getElementById('exam-timer').innerText = `${p(h)}:${p(m)}:${p(s)}`;
+
+            if(currentSeconds <= 0) {
+                // Auto Submit Trigger
+                isTimerActive = false; // Pause while switching
+                alert(`Time's up for the ${currentSection.toUpperCase()} section! Auto-submitting...`);
+                
+                if (currentSection === 'aptitude') {
+                    switchSection('reasoning');
+                    isTimerActive = true;
+                } else if (currentSection === 'reasoning') {
+                    switchSection('java');
+                    isTimerActive = true;
+                } else if (currentSection === 'java') {
+                    document.getElementById('submit-code-btn').click(); // Trigger final grade
+                }
+            }
+        }, 1000);
+
+        // Run Code Button Simulator
+        document.getElementById('run-code-btn').addEventListener('click', () => {
+            const btn = document.getElementById('run-code-btn');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Compiling...';
+            btn.classList.add('opacity-80', 'cursor-not-allowed', 'text-yellow-400');
+
+            // Simulate Network / Compilation delay
+            setTimeout(() => {
+                alert("COMPILATION SUCCESSFUL\n\nInput: [4, 5, 0, 1, 9, 0, 5, 0]\nExpected Output: [4, 5, 1, 9, 5, 0, 0, 0]\nYour Output: [4, 5, 1, 9, 5, 0, 0, 0]\n\nAll public test cases passed! Click 'Submit Code' to send to AI for grading.");
+                btn.innerHTML = originalText;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed', 'text-yellow-400');
+            }, 1500);
+        });
+        // Submit Button Logic connected to Backend
+        document.getElementById('submit-code-btn').addEventListener('click', async () => {
+            if (currentSection === 'aptitude') {
+                switchSection('reasoning');
+                return;
+            } else if (currentSection === 'reasoning') {
+                switchSection('java');
+                return;
+            }
+
+            // Save the very last thing they were typing before clicking submit
+            saveCurrentState();
+
+            const btn = document.getElementById('submit-code-btn');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Analyzing Code via AI...';
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+
+            try {
+                const sessionId = localStorage.getItem('currentTestSession');
+                const testData = JSON.parse(localStorage.getItem('currentTestData'));
+                
+                // Build the prompt client-side
+                let codeSubmissionsStr = "";
+                if (answers.java && typeof answers.java === 'object') {
+                    for (const [index, code] of Object.entries(answers.java)) {
+                        if(code.trim().length > 0 && !code.includes('// Write your solution here:')) {
+                            codeSubmissionsStr += `\n--- Question ${parseInt(index)+1} Submission ---\n\`\`\`java\n${code}\n\`\`\`\n`;
+                        }
+                    }
+                }
+        
+                if (codeSubmissionsStr.length === 0) {
+                    codeSubmissionsStr = "Student submitted no code or only blank boilerplate templates.";
+                }
+        
+                const mcqContext = `
+                Original Aptitude Questions: ${JSON.stringify(testData?.aptitude || [])}
+                Student's Aptitude Answers: ${JSON.stringify(answers.aptitude || {})}
+                
+                Original Reasoning Questions: ${JSON.stringify(testData?.reasoning || [])}
+                Student's Reasoning Answers: ${JSON.stringify(answers.reasoning || {})}
+                `;
+        
+                const prompt = `Act as a Strict Proctor and Senior Staff Engineer evaluating a TCS NQT Exam submission. The user has submitted up to 5 Java coding solutions and answers to Aptitude & Reasoning questions.
+                
+                PART 1: JAVA CODE ANALYSIS
+                Student Code Submissions:
+                ${codeSubmissionsStr}
+                Analyze all provided Java code for logic correctness, Time Complexity, Space Complexity, and edge case handling.
+                
+                PART 2: MCQ ANALYSIS
+                ${mcqContext}
+                Compare the Student's Answers to the correctAnswer for each aptitude and reasoning question. Identify which ones the student got wrong.
+                
+                Return a strict JSON object with exactly these keys:
+                - "score": A cumulative number between 0 and 100 combining Java correctness and MCQ accuracy.
+                - "logicEfficiency": A general efficiency string for the Java code (e.g., "O(N) - 85%").
+                - "optimizationTips": A string array containing 2 specific Java tips.
+                - "bugsSquashed": An integer of how many potential Java errors were found.
+                - "rankUpdate": One of "Ninja", "Digital", or "Prime" based on the total score.
+                - "aiPush": A short, motivational 1-sentence critique based on overall performance.
+                - "incorrectQuestions": An array of objects for the MCQ questions the student got WRONG. (If perfect, return empty array []). Each object must have:
+                    - "questionText": The original question string.
+                    - "userAnswer": What the student guessed.
+                    - "correctAnswer": The actual correct answer.
+                    - "aiExplanation": A short 1-2 sentence explanation of WHY the correct answer is true and where the user's logic failed.
+                
+                IMPORTANT: Your response MUST be valid JSON only. Do not wrap in markdown blocks.`;
+
+                const response = await fetch('http://localhost:3000/api/evaluate-submission', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: sessionId || 'guest-session',
+                        userId: 'guest',
+                        answers: answers.java || {},
+                        aptitudeAnswers: answers.aptitude || {},
+                        reasoningAnswers: answers.reasoning || {},
+                        testData: testData || {}
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('AI Evaluation Failed at backend REST endpoint.');
+                }
+
+                const evaluationData = await response.json();
+                
+                localStorage.setItem('lastEvaluation', JSON.stringify(evaluationData));
+                window.location.href = 'analytics.html';
+
+            } catch (err) {
+                console.error(err);
+                alert("Error connecting to Gemini AI REST server. Please check your internet connection.");
+                btn.innerHTML = originalText;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+            }
+        });
+
+    </script>
+</body>
+</html>
