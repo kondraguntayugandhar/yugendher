@@ -1,0 +1,17 @@
+{
+  "name": "tcs-nqt-simulator-backend",
+  "version": "1.0.0",
+  "description": "Backend service for TCS NQT Simulator utilizing Gemini API",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node --dns-result-order=ipv4first server.js",
+    "dev": "node --watch --dns-result-order=ipv4first server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
